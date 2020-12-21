@@ -20,7 +20,6 @@ venv/bin/python -m pip install -r requirements.txt
 venv/bin/python -m pip install pyinstaller
 venv/bin/pyinstaller --clean -F --add-binary "epcboot_gui/resources/linux/epcbootlib.so:resources/linux/" epcboot_gui/epcboot_gui.py
 
-cp release_templates/debian/* dist
 mv dist release
 cd release
 if [ -d build ]; then rm -rf build; fi;
