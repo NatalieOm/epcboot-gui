@@ -1,17 +1,17 @@
-# python-application-template
+# EPCboot GUI 
 
-Простой пример-шаблон проекта python-программы с проверкой стилей, тестами и разными стандартными файлами\папками  
-Все новые python-программы на github.com/EPC-MSU нужно создавать из этого шаблона
+EPCboot GUI allows you to:
+* browse firmware on PC and load it to controller
+* browse key file (*.txt) and load it to controller (developer only)
+* update serial and version (developer only)
 
-Запустить этот проект (из корня):
+Run (python):
 ```bash
-python hello_world/app.py
-```
-Запустить тесты (из корня):
-```bash
-python -m unittest discover tests
+python -m pip install -r requirements.txt
+cd epcboot_gui
+python epcboot_gui.py
 ```
 
-Пишите unit-тесты к своим приложениям в tests/
-
-Создан в рамках https://ximc.ru/issues/44427
+Linux:
+You should delete modemmanager! It interferes in the connection
+For it type in terminal: sudo apt-get remove --auto-remove modemmanager
