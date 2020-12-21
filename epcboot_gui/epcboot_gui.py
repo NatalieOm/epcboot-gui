@@ -458,7 +458,7 @@ def collapse():
 
 
 collapse_frame = ttk.Frame(main_win)
-collapse_button = ttk.Button(collapse_frame, text="Developer", command=collapse)
+collapse_button = ttk.Button(collapse_frame, text="Developer mode", command=collapse)
 separator = ttk.Separator(collapse_frame, orient="horizontal")
 collapse_button.pack(side=tk.LEFT, padx=5)
 separator.pack(expand=tk.TRUE, side=tk.RIGHT, fill=tk.X, padx=5)
