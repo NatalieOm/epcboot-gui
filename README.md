@@ -12,6 +12,22 @@ cd epcboot_gui
 python epcboot_gui.py
 ```
 
-Linux:
-You should delete modemmanager! It interferes in the connection
-For it type in terminal: sudo apt-get remove --auto-remove modemmanager
+Build binary release on linux:
+```bash
+source release.sh
+```
+Windows:
+```bash
+.\release_win64.bat
+```
+
+NOTE. On linux machine we recommend to stop(or remove) the modemmanager. The modemmanager interferes with our 
+bootloader.
+```bash
+sudo systemctl stop ModemManager.service
+```
+
+#### For developer
+
+This repository is configured to build automatically. Find build artifacts here 
+https://github.com/EPC-MSU/epcboot-gui/actions?query=workflow%3ABuild Use them when creating a release
