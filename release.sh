@@ -18,7 +18,7 @@ venv/bin/python -m pip install --upgrade pip
 venv/bin/python -m pip install -r requirements.txt
 
 venv/bin/python -m pip install pyinstaller
-venv/bin/pyinstaller --clean -F --add-binary "epcboot_gui/resources/linux/epcbootlib.so:resources/linux/" epcboot_gui/epcboot_gui.py
+venv/bin/pyinstaller --clean -F --add-binary "epcboot_gui/resources/linux/epcbootlib.so:." epcboot_gui/epcboot_gui.py
 
 mv dist release
 cd release
