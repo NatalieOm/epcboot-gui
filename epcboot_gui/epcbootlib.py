@@ -1,5 +1,5 @@
 """Bindings for epcbootlib.dll"""
-from ctypes import *
+from ctypes import WinDLL, CDLL, c_char_p, c_int, c_uint
 import struct
 from platform import system
 

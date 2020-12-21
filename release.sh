@@ -25,6 +25,5 @@ mv dist release
 cd release
 if [ -d build ]; then rm -rf build; fi;
 if [ -d dist ]; then rm -rf dist; fi;
-if [ -d venv ]; then rm -rf venv; fi;
 count='ls -1 *.spec 2>/dev/null | wc -l'
 if [[ $count != 0 ]]; then rm -rf *.spec; fi;

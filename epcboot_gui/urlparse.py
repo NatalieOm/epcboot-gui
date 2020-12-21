@@ -1,4 +1,4 @@
-"""URL parser
+r"""URL parser
 
 Checks whether an entered URL corresponds the pattern com:\\.\COMxxx,
 where xxx is a number

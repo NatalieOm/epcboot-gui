@@ -16,6 +16,5 @@ venv\Scripts\pyinstaller  --clean -F --add-binary "epcboot_gui/resources/win64/e
 move dist release
 if exist build rd /s/q build
 if exist dist rd /s/q dist
-if exist venv rd /s/q venv
 if exist epcboot_gui.spec del epcboot_gui.spec
 cd release
