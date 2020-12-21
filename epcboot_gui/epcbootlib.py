@@ -1,5 +1,6 @@
 """Bindings for epcbootlib.dll"""
-from ctypes import WinDLL, CDLL, c_char_p, c_int, c_uint
+from ctypes import c_char_p, c_int, c_uint
+import ctypes
 import struct
 from platform import system
 
@@ -7,13 +8,13 @@ from platform import system
 os_kind = system().lower()
 if os_kind == "windows":
     if 8 * struct.calcsize("P") == 32:
-        epcbootlib = WinDLL("resources\\win32\\epcbootlib.dll")
+        epcbootlib = ctypes.WinDLL("resources\\win32\\epcbootlib.dll")
         print("Detected system is Win32")
     else:
-        epcbootlib = WinDLL("resources\\win64\\epcbootlib.dll")
+        epcbootlib = ctypes.WinDLL("resources\\win64\\epcbootlib.dll")
         print("Detected system is Win64")
 elif os_kind == "freebsd" or "linux" in os_kind:
-    epcbootlib = CDLL("resources/linux/epcbootlib.so")
+    epcbootlib = ctypes.CDLL("resources/linux/epcbootlib.so")
     print("Detected system is Linux")
 else:
     raise RuntimeError("Unexpected OS")
