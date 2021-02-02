@@ -15,6 +15,7 @@ import epcbootlib
 import urlparse
 import argparse
 import sys
+import ntpath
 
 
 parser = argparse.ArgumentParser()
@@ -55,7 +56,9 @@ def _upd_combox():
     """Updates COM list"""
     combox.config(values=[comport.device
                           for comport in serial.tools.list_ports.comports()])
-
+def clean_log():
+    """Cleans log"""
+    log.delete('1.0', tk.END)
 
 def firmware_browse():
     """Opens file dialog
@@ -91,6 +94,7 @@ def firmware_upd():
     """Updates firmware"""
     global URL
     global FIRMWARE
+    global FIRM_PATH
     if URL.get() == "":
         log.insert(tk.END, "You must specify device URL.\n")
         return
@@ -105,7 +109,7 @@ def firmware_upd():
         return
     # the statement below is necessary to work with url as C char*
     url = ctypes.create_string_buffer(URL.get().encode())
-    log.insert(tk.END, "Starting firmware update. Port: {}\n".format(URL.get()))
+    log.insert(tk.END, "Starting firmware update. Port: {}. Firmware file: {}\n".format(URL.get(), ntpath.basename(FIRM_PATH.get())))
     log.insert(tk.END, "Please wait\n")
     main_win.update()
     res = epcbootlib.urpc_firmware_update(url, FIRMWARE, len(FIRMWARE))
@@ -202,7 +206,7 @@ def ident_and_key_set():
     key = ctypes.create_string_buffer(KEY.get().encode())
     version = ctypes.create_string_buffer(version_entry.get().encode())
     log.insert(tk.END, "Starting identificator and key setting."
-                       " Port: {}\n".format(URL.get()))
+                       " Port: {}\n Serial number: {}\n Hardware version: {}\n".format(URL.get(), serial_entry.get(), version_entry.get()))
     log.insert(tk.END, "Please wait\n")
     main_win.update()
     res = epcbootlib.urpc_write_ident(url, key,
@@ -249,7 +253,6 @@ def _version_validation(content, trigger_type="focusout"):
         return tk.TRUE
     print(content)
     if content == "":
-        print(trigger_type)
         if trigger_type == "focusout":
             # sets the hint
             version_entry.config(font=("Calibri Italic", 10), foreground="grey")
@@ -349,9 +352,20 @@ FIRM_PATH = tk.StringVar()  # path to firmware
 
 # log_frame
 log_frame = ttk.Labelframe(main_win, text="Log")
-log = scrolledtext.ScrolledText(log_frame, height=12, wrap=tk.WORD)
+log = scrolledtext.ScrolledText(log_frame, height=8, wrap=tk.WORD)
+log.edit_modified(0)
+log_button_frame = ttk.LabelFrame(log_frame)
+log_button = ttk.Button(log_button_frame, text="Clean log", command=clean_log)
+log_button_frame.pack(side=tk.BOTTOM, fill=tk.X)
 log_frame.pack(expand=tk.TRUE, side=tk.BOTTOM, fill=tk.BOTH)
 log.pack(expand=tk.TRUE, side=tk.BOTTOM, fill=tk.BOTH)
+log_button.pack(side=tk.RIGHT)
+
+def on_modification(event=None):
+    log.see(tk.END)
+    log.edit_modified(0)
+
+log.bind("<<Modified>>", on_modification)
 
 firmware_tab = ttk.Frame(main_win)  # ttk.Frame(notebook)
 developer_tab = ttk.Frame(main_win)  # ttk.Frame(notebook)
