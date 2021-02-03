@@ -246,9 +246,9 @@ def _serial_validation(content, trigger_type):
     if not content.isdigit():
         log.insert(tk.END, "Serial number must be a number!\n")
         return tk.FALSE
-    if int(content) > 512:
-        log.insert(tk.END, "Serial number must be less than 512!\n")
-        return tk.FALSE
+    #if int(content) > 512:
+    #    log.insert(tk.END, "Serial number must be less than 512!\n")
+    #    return tk.FALSE
     serial_entry.config(font=("Calibri", 10), foreground="green")
     return tk.TRUE
 
