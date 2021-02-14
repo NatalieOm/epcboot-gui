@@ -14,7 +14,7 @@ if os_kind == "windows":
         epcbootlib = ctypes.WinDLL("resources\\win64\\epcbootlib.dll")
         print("Detected system is Win64")
 elif os_kind == "freebsd" or "linux" in os_kind:
-    epcbootlib = ctypes.CDLL("epcbootlib.so")
+    epcbootlib = ctypes.CDLL("resources/linux/epcbootlib.so")
     print("Detected system is Linux")
 else:
     raise RuntimeError("Unexpected OS")
