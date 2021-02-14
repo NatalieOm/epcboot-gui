@@ -16,9 +16,14 @@ Build binary release on linux:
 ```bash
 source release.sh
 ```
-Windows:
+Build binary release on Windows:
+* with console for debugging
 ```bash
-.\release_win64.bat
+.\release_win64.bat --console
+```
+* without console
+```bash
+.\release_win64.bat --noconsole
 ```
 
 NOTE.
