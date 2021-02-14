@@ -11,7 +11,7 @@ venv\Scripts\python -m pip install --upgrade pip
 venv\Scripts\python -m pip install -r requirements.txt
 
 venv\Scripts\python -m pip install pyinstaller
-venv\Scripts\pyinstaller --clean -F --add-binary "epcboot_gui/resources/win64/epcbootlib.dll;resources/win64/" epcboot_gui/epcboot_gui.py
+venv\Scripts\pyinstaller --clean --noconsole -F --add-binary "epcboot_gui/resources/win64/epcbootlib.dll;resources/win64/" epcboot_gui/epcboot_gui.py
 
 move dist release
 if exist build rd /s/q build
