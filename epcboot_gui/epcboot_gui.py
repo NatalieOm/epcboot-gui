@@ -15,6 +15,7 @@ import epcbootlib
 import urlparse
 import argparse
 import sys
+import ntpath
 
 
 parser = argparse.ArgumentParser()
@@ -55,7 +56,9 @@ def _upd_combox():
     """Updates COM list"""
     combox.config(values=[comport.device
                           for comport in serial.tools.list_ports.comports()])
-
+def clean_log():
+    """Cleans log"""
+    log.delete('1.0', tk.END)
 
 def firmware_browse():
     """Opens file dialog
@@ -91,6 +94,7 @@ def firmware_upd():
     """Updates firmware"""
     global URL
     global FIRMWARE
+    global FIRM_PATH
     if URL.get() == "":
         log.insert(tk.END, "You must specify device URL.\n")
         return
@@ -105,7 +109,7 @@ def firmware_upd():
         return
     # the statement below is necessary to work with url as C char*
     url = ctypes.create_string_buffer(URL.get().encode())
-    log.insert(tk.END, "Starting firmware update. Port: {}\n".format(URL.get()))
+    log.insert(tk.END, "Starting firmware update. Port: {}. Firmware file: {}\n".format(URL.get(), ntpath.basename(FIRM_PATH.get())))
     log.insert(tk.END, "Please wait\n")
     main_win.update()
     res = epcbootlib.urpc_firmware_update(url, FIRMWARE, len(FIRMWARE))
@@ -202,15 +206,26 @@ def ident_and_key_set():
     key = ctypes.create_string_buffer(KEY.get().encode())
     version = ctypes.create_string_buffer(version_entry.get().encode())
     log.insert(tk.END, "Starting identificator and key setting."
-                       " Port: {}\n".format(URL.get()))
+                       " Port: {}\n Serial number: {}\n Hardware version: {}\n".format(URL.get(), serial_entry.get(), version_entry.get()))
     log.insert(tk.END, "Please wait\n")
     main_win.update()
     res = epcbootlib.urpc_write_ident(url, key,
                                       int(serial_entry.get()), version)
     if res == 0:
         log.insert(tk.END, "Ok\n")
+        _autoincrement_serial()
     else:
         log.insert(tk.END, "Fail\n")
+
+def _autoincrement_serial():
+    global AUTOINCR
+    if AUTOINCR:
+        serial_number = int(serial_entry.get())
+        serial_entry.delete(0, tk.END)
+        serial_entry.insert(0, str(serial_number+1))
+        log.insert(tk.END, "Serial number incremented.")
+    else:
+        return
 
 
 def _serial_validation(content, trigger_type):
@@ -231,9 +246,9 @@ def _serial_validation(content, trigger_type):
     if not content.isdigit():
         log.insert(tk.END, "Serial number must be a number!\n")
         return tk.FALSE
-    if int(content) > 512:
-        log.insert(tk.END, "Serial number must be less than 512!\n")
-        return tk.FALSE
+    #if int(content) > 512:
+    #    log.insert(tk.END, "Serial number must be less than 512!\n")
+    #    return tk.FALSE
     serial_entry.config(font=("Calibri", 10), foreground="green")
     return tk.TRUE
 
@@ -249,7 +264,6 @@ def _version_validation(content, trigger_type="focusout"):
         return tk.TRUE
     print(content)
     if content == "":
-        print(trigger_type)
         if trigger_type == "focusout":
             # sets the hint
             version_entry.config(font=("Calibri Italic", 10), foreground="grey")
@@ -349,9 +363,20 @@ FIRM_PATH = tk.StringVar()  # path to firmware
 
 # log_frame
 log_frame = ttk.Labelframe(main_win, text="Log")
-log = scrolledtext.ScrolledText(log_frame, height=12, wrap=tk.WORD)
+log = scrolledtext.ScrolledText(log_frame, height=8, wrap=tk.WORD)
+log.edit_modified(0)
+log_button_frame = ttk.LabelFrame(log_frame)
+log_button = ttk.Button(log_button_frame, text="Clean log", command=clean_log)
+log_button_frame.pack(side=tk.BOTTOM, fill=tk.X)
 log_frame.pack(expand=tk.TRUE, side=tk.BOTTOM, fill=tk.BOTH)
 log.pack(expand=tk.TRUE, side=tk.BOTTOM, fill=tk.BOTH)
+log_button.pack(side=tk.RIGHT)
+
+def on_modification(event=None):
+    log.see(tk.END)
+    log.edit_modified(0)
+
+log.bind("<<Modified>>", on_modification)
 
 firmware_tab = ttk.Frame(main_win)  # ttk.Frame(notebook)
 developer_tab = ttk.Frame(main_win)  # ttk.Frame(notebook)
@@ -409,11 +434,18 @@ serial_entry = ttk.Entry(serial_frame, foreground="grey",      #
 version_label = ttk.Label(version_frame, text="HW version:")   #
 version_entry = ttk.Entry(version_frame, foreground="grey",    #
                           font=("Calibri Italic", 10))         #
+AUTOINCR = tk.IntVar()
+set_autoincrement_button = ttk.Checkbutton(right_frame,
+                              text="Auto increment",
+                              width=30,
+                              variable=AUTOINCR,
+                              onvalue=1, offvalue=0)
 set_ident_button = ttk.Button(right_frame,                     #
                               text="Set serial and hardware version",  #
                               width=30,                        #
                               command=ident_and_key_set)       #
-set_ident_button.pack(expand=tk.TRUE)                         #
+set_autoincrement_button.pack(expand=tk.TRUE, side=tk.TOP)
+set_ident_button.pack(expand=tk.TRUE, side=tk.BOTTOM)                         #
 
 # initializing serial_entry
 serial_entry.insert(tk.END, "xxx")
