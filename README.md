@@ -5,32 +5,36 @@ EPCboot GUI allows you to:
 * browse key file (*.txt) and load it to controller (developer only)
 * update serial and version (developer only)
 
-Run (python):
+### Build binary release
+Windows
+In the epcboot-gui directory in command prompt/powershell build:
+* with console for debugging
+```bash
+.\release_win64.bat --console
+```
+* without console
+ ```bash
+ .\release_win64.bat --noconsole
+ ```
+Linux
+In the epcboot-gui directory in terminal build:
+```bash
+source release.sh
+```
+
+### Run (python)
+In the epcboot-gui directory in cmd/powershell for Windows or terminal for Linux:
 ```bash
 python -m pip install -r requirements.txt
 cd epcboot_gui
 python epcboot_gui.py
 ```
 
-Build binary release on linux:
-```bash
-source release.sh
-```
-Build binary release on Windows:
-* with console for debugging
-```bash
-.\release_win64.bat --console
-```
-* without console
-```bash
-.\release_win64.bat --noconsole
-```
-
-NOTE.
+####  NOTE.
 * tkinter and python3-venv on linux should be installed. If not, do so:
-'''bash
+```bash
 sudo apt install python3-tk python3-venv
-'''
+```
 * On linux machine we recommend to stop(or remove) the modemmanager. The modemmanager interferes with our 
 bootloader.
 ```bash
