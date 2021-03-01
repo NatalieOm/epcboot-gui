@@ -219,7 +219,7 @@ def ident_and_key_set():
 
 def _autoincrement_serial():
     global AUTOINCR
-    if AUTOINCR:
+    if AUTOINCR.get():
         serial_number = int(serial_entry.get())
         serial_entry.delete(0, tk.END)
         serial_entry.insert(0, str(serial_number+1))
@@ -246,9 +246,6 @@ def _serial_validation(content, trigger_type):
     if not content.isdigit():
         log.insert(tk.END, "Serial number must be a number!\n")
         return tk.FALSE
-    #if int(content) > 512:
-    #    log.insert(tk.END, "Serial number must be less than 512!\n")
-    #    return tk.FALSE
     serial_entry.config(font=("Calibri", 10), foreground="green")
     return tk.TRUE
 
@@ -434,12 +431,11 @@ serial_entry = ttk.Entry(serial_frame, foreground="grey",      #
 version_label = ttk.Label(version_frame, text="HW version:")   #
 version_entry = ttk.Entry(version_frame, foreground="grey",    #
                           font=("Calibri Italic", 10))         #
-AUTOINCR = tk.IntVar()
+AUTOINCR = tk.BooleanVar()
 set_autoincrement_button = ttk.Checkbutton(right_frame,
                               text="Auto increment",
                               width=30,
-                              variable=AUTOINCR,
-                              onvalue=1, offvalue=0)
+                              variable=AUTOINCR)
 set_ident_button = ttk.Button(right_frame,                     #
                               text="Set serial and hardware version",  #
                               width=30,                        #
