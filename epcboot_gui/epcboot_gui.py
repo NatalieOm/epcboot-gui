@@ -56,9 +56,12 @@ def _upd_combox():
     """Updates COM list"""
     combox.config(values=[comport.device
                           for comport in serial.tools.list_ports.comports()])
+
+
 def clean_log():
     """Cleans log"""
     log.delete('1.0', tk.END)
+
 
 def firmware_browse():
     """Opens file dialog
@@ -109,7 +112,8 @@ def firmware_upd():
         return
     # the statement below is necessary to work with url as C char*
     url = ctypes.create_string_buffer(URL.get().encode())
-    log.insert(tk.END, "Starting firmware update. Port: {}. Firmware file: {}\n".format(URL.get(), ntpath.basename(FIRM_PATH.get())))
+    log.insert(tk.END, "Starting firmware update. "
+                       "Port: {}. Firmware file: {}\n".format(URL.get(), ntpath.basename(FIRM_PATH.get())))
     log.insert(tk.END, "Please wait\n")
     main_win.update()
     res = epcbootlib.urpc_firmware_update(url, FIRMWARE, len(FIRMWARE))
@@ -206,7 +210,8 @@ def ident_and_key_set():
     key = ctypes.create_string_buffer(KEY.get().encode())
     version = ctypes.create_string_buffer(version_entry.get().encode())
     log.insert(tk.END, "Starting identificator and key setting."
-                       " Port: {}\n Serial number: {}\n Hardware version: {}\n".format(URL.get(), serial_entry.get(), version_entry.get()))
+                       " Port: {}\n Serial number: {}\n "
+                       "Hardware version: {}\n".format(URL.get(), serial_entry.get(), version_entry.get()))
     log.insert(tk.END, "Please wait\n")
     main_win.update()
     res = epcbootlib.urpc_write_ident(url, key,
@@ -216,6 +221,7 @@ def ident_and_key_set():
         _autoincrement_serial()
     else:
         log.insert(tk.END, "Fail\n")
+
 
 def _autoincrement_serial():
     global AUTOINCR
@@ -416,9 +422,9 @@ version_entry = ttk.Entry(version_frame, foreground="grey",    #
                           font=("Calibri Italic", 10))         #
 AUTOINCR = tk.BooleanVar()
 set_autoincrement_button = ttk.Checkbutton(right_frame,
-                              text="Auto increment",
-                              width=30,
-                              variable=AUTOINCR)
+                                           text="Auto increment",
+                                           width=30,
+                                           variable=AUTOINCR)
 set_ident_button = ttk.Button(right_frame,                     #
                               text="Set serial and hardware version",  #
                               width=30,                        #
@@ -506,9 +512,11 @@ log_frame.pack(expand=tk.TRUE, side=tk.BOTTOM, fill=tk.BOTH)
 log.pack(expand=tk.TRUE, side=tk.BOTTOM, fill=tk.BOTH)
 log_button.pack(side=tk.RIGHT)
 
+
 def on_modification(event=None):
     log.see(tk.END)
     log.edit_modified(0)
+
 
 log.bind("<<Modified>>", on_modification)
 
