@@ -358,23 +358,6 @@ FIRM_PATH = tk.StringVar()  # path to firmware
 # 2. FIRM_PATH  and  firmware_entry
 # (see below)
 
-# log_frame
-log_frame = ttk.Labelframe(main_win, text="Log")
-log = scrolledtext.ScrolledText(log_frame, height=8, wrap=tk.WORD)
-log.edit_modified(0)
-log_button_frame = ttk.LabelFrame(log_frame)
-log_button = ttk.Button(log_button_frame, text="Clean log", command=clean_log)
-log_button_frame.pack(side=tk.BOTTOM, fill=tk.X)
-log_frame.pack(expand=tk.TRUE, side=tk.BOTTOM, fill=tk.BOTH)
-log.pack(expand=tk.TRUE, side=tk.BOTTOM, fill=tk.BOTH)
-log_button.pack(side=tk.RIGHT)
-
-def on_modification(event=None):
-    log.see(tk.END)
-    log.edit_modified(0)
-
-log.bind("<<Modified>>", on_modification)
-
 firmware_tab = ttk.Frame(main_win)  # ttk.Frame(notebook)
 developer_tab = ttk.Frame(main_win)  # ttk.Frame(notebook)
 
@@ -468,8 +451,10 @@ def collapse():
 
     global DEV_STATE
     if DEV_STATE:
+        log_frame.pack_forget()
         separator.pack(expand=tk.TRUE, side=tk.RIGHT, fill=tk.X, padx=5)
         developer_tab.pack_forget()
+        log_frame.pack(expand=tk.TRUE, side=tk.BOTTOM, fill=tk.BOTH)
         DEV_STATE = False
         if sys.platform.startswith("win"):
             main_win.geometry(win_geometry[0] + "x" + win_geometry[1])
@@ -477,10 +462,12 @@ def collapse():
             main_win.geometry(linux_geometry[0] + "x" + linux_geometry[1])
     else:
         separator.pack_forget()
+        log_frame.pack_forget()
         developer_tab.pack(expand=tk.TRUE, side=tk.TOP, fill=tk.BOTH)
+        log_frame.pack(expand=tk.TRUE, side=tk.BOTTOM, fill=tk.BOTH)
         DEV_STATE = True
         if sys.platform.startswith("win"):
-            main_win.geometry(win_geometry[0] + "x" + "530")
+            main_win.geometry(win_geometry[0] + "x" + "590")
         elif sys.platform.startswith("linux"):
             main_win.geometry(linux_geometry[0] + "x" + "568")
 
@@ -507,5 +494,22 @@ serial_entry.pack(side=tk.LEFT, padx=14)
 version_label.pack(side=tk.LEFT)
 version_entry.pack(side=tk.LEFT, padx=26)
 set_ident_button.pack(side=tk.TOP)
+
+# log_frame
+log_frame = ttk.Labelframe(main_win, text="Log")
+log = scrolledtext.ScrolledText(log_frame, height=8, wrap=tk.WORD)
+log.edit_modified(0)
+log_button_frame = ttk.LabelFrame(log_frame)
+log_button = ttk.Button(log_button_frame, text="Clean log", command=clean_log)
+log_button_frame.pack(side=tk.BOTTOM, fill=tk.X)
+log_frame.pack(expand=tk.TRUE, side=tk.BOTTOM, fill=tk.BOTH)
+log.pack(expand=tk.TRUE, side=tk.BOTTOM, fill=tk.BOTH)
+log_button.pack(side=tk.RIGHT)
+
+def on_modification(event=None):
+    log.see(tk.END)
+    log.edit_modified(0)
+
+log.bind("<<Modified>>", on_modification)
 
 tk.mainloop()
