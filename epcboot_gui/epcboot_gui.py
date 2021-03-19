@@ -16,6 +16,8 @@ import urlparse
 import argparse
 import sys
 import ntpath
+import threading
+import time
 
 
 parser = argparse.ArgumentParser()
@@ -35,10 +37,12 @@ def com_chosen(event):
         test_port = serial.Serial(port=URL.get())
         test_port.close()
     except serial.SerialException:
-        log.insert(tk.END, "Something is wrong! If you use Linux, open epcboot_gui"
-                   " with root.\n"
-                   "In case of using Windows, make sure that the device is not"
-                   " used by another program.\n")
+        log.insert(
+            tk.END,
+            "Something is wrong! If you use Linux, open epcboot_gui"
+            " with root.\n"
+            "In case of using Windows, make sure that the device is not"
+            " used by another program.\n")
     system = sys.platform
     if system.startswith("win"):
         URL.set(r"com:\\.\{}".format(URL.get()))
@@ -90,14 +94,14 @@ def firmware_browse():
         combox.focus()
     else:
         upd_button.focus()
-    main_win.firmware.close()
+    if not isinstance(main_win.firmware, type(None)):
+        main_win.firmware.close()
 
 
-def firmware_upd():
-    """Updates firmware"""
-    global URL
-    global FIRMWARE
-    global FIRM_PATH
+def start_upd():
+    """Function starts the firmware update."""
+
+    global UPDATE_STARTED
     if URL.get() == "":
         log.insert(tk.END, "You must specify device URL.\n")
         return
@@ -105,22 +109,54 @@ def firmware_upd():
         log.insert(tk.END, "You must specify firmware file.\n")
         return
     if not urlparse.iscorrect(URL.get()):
-        log.insert(tk.END, r"Incorrect URL format. Must be one of:" + "\n"
-                           r' "com:\\.\COMx"' + "\n"
-                           r' "com:///dev/ttyUSBx"' + "\n"
-                           r' "com:///dev/ttyACMx"' + "\n")
+        log.insert(tk.END, 'Incorrect URL format. Must be one of:\n'
+                           ' "com:\\.\\COMx"\n'
+                           ' "com:///dev/ttyUSBx"\n'
+                           ' "com:///dev/ttyACMx"\n')
         return
-    # the statement below is necessary to work with url as C char*
-    url = ctypes.create_string_buffer(URL.get().encode())
-    log.insert(tk.END, "Starting firmware update. "
-                       "Port: {}. Firmware file: {}\n".format(URL.get(), ntpath.basename(FIRM_PATH.get())))
-    log.insert(tk.END, "Please wait\n")
-    main_win.update()
-    res = epcbootlib.urpc_firmware_update(url, FIRMWARE, len(FIRMWARE))
-    if res == 0:
-        log.insert(tk.END, "Ok\n")
-    else:
-        log.insert(tk.END, "Fail\n")
+    UPDATE_STARTED = True
+
+
+def set_buttons_to_state(state):
+    """Function sets the given state to all buttons.
+    :param: given state."""
+
+    firmware_browse_button.config(state=state)
+    upd_button.config(state=state)
+    collapse_button.config(state=state)
+    key_browse_button.config(state=state)
+    set_key_button.config(state=state)
+    set_ident_button.config(state=state)
+    log_button.config(state=state)
+
+
+def firmware_upd():
+    """Updates firmware"""
+    global URL
+    global FIRMWARE
+    global FIRM_PATH
+    global UPDATE_STARTED
+
+    while RUNNING:
+        if not UPDATE_STARTED:
+            # Button Update is not clicked
+            time.sleep(1)
+            continue
+        # Button is clicked
+        set_buttons_to_state(tk.DISABLED)
+        # the statement below is necessary to work with url as C char*
+        url = ctypes.create_string_buffer(URL.get().encode())
+        log.insert(tk.END, "Starting firmware update. Port: {}. Firmware file: {}\n".
+                   format(URL.get(), ntpath.basename(FIRM_PATH.get())))
+        log.insert(tk.END, "Please wait\n")
+        main_win.update()
+        res = epcbootlib.urpc_firmware_update(url, FIRMWARE, len(FIRMWARE))
+        if res == 0:
+            log.insert(tk.END, "Ok\n")
+        else:
+            log.insert(tk.END, "Fail\n")
+        UPDATE_STARTED = False
+        set_buttons_to_state(tk.NORMAL)
 
 
 def key_browse():
@@ -137,11 +173,11 @@ def key_browse():
     if not isinstance(main_win.key_file, type(None)):
         # file was opened
         KEY.set(main_win.key_file.read().rstrip())
+        main_win.key_file.close()
     else:
         # file wasn't open
         # probably you open dialog and close it without choosing any file
         pass
-    main_win.key_file.close()
 
 
 def key_set():
@@ -209,9 +245,14 @@ def ident_and_key_set():
     url = ctypes.create_string_buffer(URL.get().encode())
     key = ctypes.create_string_buffer(KEY.get().encode())
     version = ctypes.create_string_buffer(version_entry.get().encode())
-    log.insert(tk.END, "Starting identificator and key setting."
-                       " Port: {}\n Serial number: {}\n "
-                       "Hardware version: {}\n".format(URL.get(), serial_entry.get(), version_entry.get()))
+    log.insert(
+        tk.END,
+        "Starting identificator and key setting."
+        " Port: {}\n Serial number: {}\n "
+        "Hardware version: {}\n".format(
+            URL.get(),
+            serial_entry.get(),
+            version_entry.get()))
     log.insert(tk.END, "Please wait\n")
     main_win.update()
     res = epcbootlib.urpc_write_ident(url, key,
@@ -228,7 +269,7 @@ def _autoincrement_serial():
     if AUTOINCR.get():
         serial_number = int(serial_entry.get())
         serial_entry.delete(0, tk.END)
-        serial_entry.insert(0, str(serial_number+1))
+        serial_entry.insert(0, str(serial_number + 1))
         log.insert(tk.END, "Serial number incremented.")
     else:
         return
@@ -269,7 +310,11 @@ def _version_validation(content, trigger_type="focusout"):
     if content == "":
         if trigger_type == "focusout":
             # sets the hint
-            version_entry.config(font=("Calibri Italic", 10), foreground="grey")
+            version_entry.config(
+                font=(
+                    "Calibri Italic",
+                    10),
+                foreground="grey")
             version_entry.insert(tk.END, "x.x.x")
         return tk.TRUE
     # the .find(".", x) returns -1 if "." is not found
@@ -293,18 +338,20 @@ def _version_validation(content, trigger_type="focusout"):
 
     if second_dot_index == -1:                                  #
         patch = ""                                              #
-        minor = content[first_dot_index + 1:]                   # minor correction
+        # minor correction
+        minor = content[first_dot_index + 1:]
     if first_dot_index == -1:                                   #
         patch = ""                                              #
         minor = ""                                              #
-        major = content[second_dot_index + 1:]                  # major correction
+        # major correction
+        major = content[second_dot_index + 1:]
 
     if not major.isdigit():
         log.insert(tk.END, "MAJOR should be a number!\n")
         return tk.FALSE
     if not minor.isdigit():
         if (minor == "" and second_dot_index == -1 and
-           trigger_type != "focusout"):
+                trigger_type != "focusout"):
             version_entry.config(font=("Calibri", 10), foreground="green")
             return tk.TRUE
         log.insert(tk.END, "MINOR should be a number!\n")
@@ -370,7 +417,8 @@ developer_tab = ttk.Frame(main_win)  # ttk.Frame(notebook)
 # firmware tab:
 com_frame = ttk.Labelframe(firmware_tab, text="COM settings")
 com_label = ttk.Label(com_frame, text="COM port:")
-combox = ttk.Combobox(com_frame, postcommand=_upd_combox, width=15, textvariable=URL)
+combox = ttk.Combobox(com_frame, postcommand=_upd_combox, width=15,
+                      textvariable=URL)
 combox.bind("<<ComboboxSelected>>", com_chosen)
 com_hint = ttk.Label(com_frame, font=("Calibri Italic", 10))
 if sys.platform.startswith("win"):
@@ -381,8 +429,10 @@ else:
 firmware_frame = ttk.Labelframe(firmware_tab, text="Firmware update")
 firmware_label = ttk.Label(firmware_frame, text="Firmware:")
 firmware_entry = ttk.Entry(firmware_frame, textvariable=FIRM_PATH, width=17)
-firmware_browse_button = ttk.Button(firmware_frame, text="Browse...", width=10, command=firmware_browse)
-upd_button = ttk.Button(firmware_tab, text="Update firmware", state=tk.DISABLED, width=20, command=firmware_upd)
+firmware_browse_button = ttk.Button(firmware_frame, text="Browse...", width=10,
+                                    command=firmware_browse)
+upd_button = ttk.Button(firmware_tab, text="Update firmware",
+                        state=tk.DISABLED, width=20, command=start_upd)
 
 com_frame.pack(side=tk.TOP, fill=tk.X, padx=5, pady=3, ipady=6)
 firmware_frame.pack(side=tk.TOP, fill=tk.X, padx=5, pady=3, ipady=5)
@@ -421,16 +471,13 @@ version_label = ttk.Label(version_frame, text="HW version:")   #
 version_entry = ttk.Entry(version_frame, foreground="grey",    #
                           font=("Calibri Italic", 10))         #
 AUTOINCR = tk.BooleanVar()
-set_autoincrement_button = ttk.Checkbutton(right_frame,
-                                           text="Auto increment",
-                                           width=30,
-                                           variable=AUTOINCR)
-set_ident_button = ttk.Button(right_frame,                     #
-                              text="Set serial and hardware version",  #
-                              width=30,                        #
-                              command=ident_and_key_set)       #
+set_autoincrement_button = ttk.Checkbutton(
+    right_frame, text="Auto increment", width=30, variable=AUTOINCR)
+set_ident_button = ttk.Button(
+    right_frame, text="Set serial and hardware version", width=30,
+    command=ident_and_key_set)
 set_autoincrement_button.pack(expand=tk.TRUE, side=tk.TOP)
-set_ident_button.pack(expand=tk.TRUE, side=tk.BOTTOM)                         #
+set_ident_button.pack(expand=tk.TRUE, side=tk.BOTTOM)
 
 # initializing serial_entry
 serial_entry.insert(tk.END, "xxx")
@@ -479,7 +526,8 @@ def collapse():
 
 
 collapse_frame = ttk.Frame(main_win)
-collapse_button = ttk.Button(collapse_frame, text="Developer mode", command=collapse)
+collapse_button = ttk.Button(collapse_frame, text="Developer mode",
+                             command=collapse)
 separator = ttk.Separator(collapse_frame, orient="horizontal")
 collapse_button.pack(side=tk.LEFT, padx=5)
 separator.pack(expand=tk.TRUE, side=tk.RIGHT, fill=tk.X, padx=5)
@@ -488,7 +536,8 @@ separator.pack(expand=tk.TRUE, side=tk.RIGHT, fill=tk.X, padx=5)
 firmware_tab.pack(expand=tk.TRUE, side=tk.TOP, fill=tk.BOTH)
 collapse_frame.pack(expand=tk.TRUE, side=tk.TOP, fill=tk.X)
 key_frame.pack(side=tk.TOP, fill=tk.X, padx=5, pady=3, ipady=4)
-ident_frame.pack(expand=tk.TRUE, side=tk.TOP, padx=5, fill=tk.BOTH, pady=3, ipady=4)
+ident_frame.pack(expand=tk.TRUE, side=tk.TOP, padx=5, fill=tk.BOTH, pady=3,
+                 ipady=4)
 serial_frame.pack(side=tk.TOP, fill=tk.X, pady=7)
 version_frame.pack(side=tk.TOP, fill=tk.X)
 key_label.pack(side=tk.LEFT)
@@ -520,4 +569,22 @@ def on_modification(event=None):
 
 log.bind("<<Modified>>", on_modification)
 
+# Add a thread to update firmware
+UPDATE_STARTED = False
+RUNNING = True
+thread_upd = threading.Thread(target=firmware_upd)
+thread_upd.start()
+
+
+def close_window():
+    """This function breaks an infinite loop in the update stream."""
+
+    global RUNNING
+    RUNNING = False
+    main_win.destroy()
+
+
+main_win.protocol("WM_DELETE_WINDOW", close_window)
+
 tk.mainloop()
+thread_upd.join()
