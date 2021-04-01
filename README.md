@@ -6,8 +6,10 @@ EPCboot GUI allows you to:
 * update serial and version (developer only)
 
 ### Build binary release
-Windows
+##### Windows
+
 In the epcboot-gui directory in command prompt/powershell build:
+
 * with console for debugging
 ```bash
 .\release_win64.bat --console
@@ -16,8 +18,10 @@ In the epcboot-gui directory in command prompt/powershell build:
  ```bash
  .\release_win64.bat --noconsole
  ```
-Linux
+##### Linux
+
 In the epcboot-gui directory in terminal build:
+
 ```bash
 source release.sh
 ```
@@ -30,12 +34,12 @@ cd epcboot_gui
 python epcboot_gui.py
 ```
 
-####  NOTE.
+####  NOTE
 * tkinter and python3-venv on linux should be installed. If not, do so:
 ```bash
 sudo apt install python3-tk python3-venv
 ```
-* On linux machine we recommend to stop(or remove) the modemmanager. The modemmanager interferes with our 
+* On Linux machine we recommend to stop (or remove) the modemmanager. The modemmanager interferes with our 
 bootloader.
 ```bash
 sudo systemctl stop ModemManager.service
