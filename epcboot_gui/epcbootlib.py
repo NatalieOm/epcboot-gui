@@ -1,4 +1,5 @@
 """Bindings for epcbootlib.dll"""
+
 from ctypes import c_char_p, c_int, c_uint
 import ctypes
 import struct

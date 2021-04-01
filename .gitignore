@@ -8,6 +8,7 @@ __pycache__/
 build/
 develop-eggs/
 dist/
+release/
 downloads/
 eggs/
 .eggs/
@@ -20,6 +21,7 @@ wheels/
 pip-wheel-metadata/
 share/python-wheels/
 *.egg-info/
+.idea/
 .installed.cfg
 *.egg
 MANIFEST

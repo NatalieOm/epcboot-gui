@@ -1,23 +1,23 @@
-"""This .py file offers GUI for EPCboot
-
+"""
+This .py file offers GUI for EPCboot.
 It allows:
     * browse firmware on PC and load it to controller
     * browse key file (*.txt) and load it to controller (developer only)
     * update serial and version (developer only)
 """
-from tkinter import scrolledtext
-from tkinter import filedialog
-import tkinter as tk
-from tkinter import ttk
-import serial.tools.list_ports
+
+import argparse
 import ctypes
+import ntpath
+import sys
+import threading
+import tkinter as tk
+from tkinter import filedialog, font, messagebox, scrolledtext, ttk
+import serial
+import serial.tools.list_ports
 import epcbootlib
 import urlparse
-import argparse
-import sys
-import ntpath
-import threading
-import time
+from tip import ToolTip
 
 
 parser = argparse.ArgumentParser()
@@ -28,10 +28,10 @@ parser.add_argument("-m", "--method",
 args = parser.parse_args()
 
 
-# event handlers
+# Event handlers
 def com_chosen(event):
-    """Sets URL for Windows"""
-    import serial
+    """Sets URL."""
+
     global URL
     try:
         test_port = serial.Serial(port=URL.get())
@@ -39,9 +39,8 @@ def com_chosen(event):
     except serial.SerialException:
         log.insert(
             tk.END,
-            "Something is wrong! If you use Linux, open epcboot_gui"
-            " with root.\n"
-            "In case of using Windows, make sure that the device is not"
+            "Something is wrong! If you use Linux, open epcboot_gui with "
+            "root.\nIn case of using Windows, make sure that the device is not"
             " used by another program.\n")
     system = sys.platform
     if system.startswith("win"):
@@ -57,21 +56,22 @@ def com_chosen(event):
 
 
 def _upd_combox():
-    """Updates COM list"""
+    """Updates COM list."""
+
     combox.config(values=[comport.device
                           for comport in serial.tools.list_ports.comports()])
 
 
 def clean_log():
-    """Cleans log"""
+    """Cleans log."""
+
     log.delete('1.0', tk.END)
 
 
 def firmware_browse():
-    """Opens file dialog
+    """Opens file dialog.
+    We are going to read binary files (.cod). So .encode() isn't needed."""
 
-    We going to read binary files (.cod). So .encode() isn't needed
-    """
     global URL
     global FIRM_PATH
     global FIRMWARE
@@ -79,42 +79,34 @@ def firmware_browse():
         mode="rb",
         initialdir="/",
         title="Select firmware",
-        filetypes=(("C/C++ Code Listing", "*.cod"), ("all files", "*.*")))
+        filetypes=(("Firmware file", "*.cod"), ("All files", "*.*")))
     if not isinstance(main_win.firmware, type(None)):
-        # file was opened
+        # File was opened
         FIRM_PATH.set(main_win.firmware.name)
         FIRMWARE = main_win.firmware.read()
         upd_button.config(state=tk.NORMAL)
-    else:
-        # file wasn't open
-        # probably you open dialog and close it without choosing any file
-        pass
     if URL.get() == "":
         # in case of enabled upd_button method .state() returns empty tuple
         combox.focus()
     else:
         upd_button.focus()
-    if not isinstance(main_win.firmware, type(None)):
-        main_win.firmware.close()
 
 
-def start_upd():
+def start_update():
     """Function starts the firmware update."""
 
-    global UPDATE_STARTED
+    global UPDATE_LOCK
     if URL.get() == "":
         log.insert(tk.END, "You must specify device URL.\n")
         return
     if FIRMWARE == "":
         log.insert(tk.END, "You must specify firmware file.\n")
         return
-    if not urlparse.iscorrect(URL.get()):
-        log.insert(tk.END, 'Incorrect URL format. Must be one of:\n'
-                           ' "com:\\.\\COMx"\n'
-                           ' "com:///dev/ttyUSBx"\n'
-                           ' "com:///dev/ttyACMx"\n')
+    error_text = urlparse.validate(URL.get())
+    if error_text:
+        log.insert(tk.END, error_text)
         return
-    UPDATE_STARTED = True
+    UPDATE_LOCK.release()
 
 
 def set_buttons_to_state(state):
@@ -130,21 +122,24 @@ def set_buttons_to_state(state):
     log_button.config(state=state)
 
 
-def firmware_upd():
-    """Updates firmware"""
-    global URL
+def firmware_update():
+    """Updates firmware."""
+
     global FIRMWARE
     global FIRM_PATH
-    global UPDATE_STARTED
+    global RUNNING
+    global UPDATE_LOCK
+    global UPDATE_RUNNING
+    global URL
 
     while RUNNING:
-        if not UPDATE_STARTED:
-            # Button Update is not clicked
-            time.sleep(1)
-            continue
+        UPDATE_LOCK.acquire()
+        if not RUNNING:
+            break
+        UPDATE_RUNNING = True
         # Button is clicked
         set_buttons_to_state(tk.DISABLED)
-        # the statement below is necessary to work with url as C char*
+        # The statement below is necessary to work with url as C char*
         url = ctypes.create_string_buffer(URL.get().encode())
         log.insert(tk.END, "Starting firmware update. Port: {}. Firmware file: {}\n".
                    format(URL.get(), ntpath.basename(FIRM_PATH.get())))
@@ -155,33 +150,28 @@ def firmware_upd():
             log.insert(tk.END, "Ok\n")
         else:
             log.insert(tk.END, "Fail\n")
-        UPDATE_STARTED = False
         set_buttons_to_state(tk.NORMAL)
+        UPDATE_RUNNING = False
 
 
 def key_browse():
-    """Opens file dialog
+    """Opens file dialog. Key must be .txt file."""
 
-    Key must be .txt file
-    """
     global KEY
     main_win.key_file = filedialog.askopenfile(
         mode="r",
         initialdir="/",
         title="Select key",
-        filetypes=(("text files", "*.txt"), ("all files", "*.*")))
+        filetypes=(("Text files", "*.txt"), ("All files", "*.*")))
     if not isinstance(main_win.key_file, type(None)):
-        # file was opened
+        # File was opened
         KEY.set(main_win.key_file.read().rstrip())
         main_win.key_file.close()
-    else:
-        # file wasn't open
-        # probably you open dialog and close it without choosing any file
-        pass
 
 
 def key_set():
     """Sets cryptographic key"""
+
     global URL
     global KEY
     if URL.get() == "":
@@ -190,19 +180,19 @@ def key_set():
     if KEY.get() == "":
         log.insert(tk.END, "You must specify key.\n")
         return
-    if not urlparse.iscorrect(URL.get()):
-        log.insert(tk.END, r"Incorrect URL format. Must be one of:" + "\n"
-                           r' "com:\\.\COMX"' + "\n"
-                           r' "com:///dev/tty/ttyUSBX"' + "\n"
-                           r' "com:///dev/tty/ttyACMX"' + "\n")
+    if not urlparse.validate(URL.get()):
+        log.insert(tk.END, 'Incorrect URL format. Must be one of:\n'
+                           ' "com:\\\\.\COMx"\n'
+                           ' "com:///dev/ttyUSBx"\n'
+                           ' "com:///dev/ttyACMx"\n'
+                           ' "com:///dev/ttySx"\n')
         return
     if not (URL.get() in ["com:\\\\.\\" + comport.device
                           for comport in serial.tools.list_ports.comports()]):
         log.insert(tk.END, "Not available port\n")
         return
-    # the statement below is necessary to work with url as C char*
+    # The statement below is necessary to work with url as C char*
     url = ctypes.create_string_buffer(URL.get().encode())
-    # the statement below is necessary to work with key as C char*
     key = ctypes.create_string_buffer(KEY.get().encode())
     log.insert(tk.END, "Starting key setting. Port: {}\n".format(URL.get()))
     log.insert(tk.END, "Please wait\n")
@@ -215,7 +205,8 @@ def key_set():
 
 
 def ident_and_key_set():
-    """Sets serial number, hardware version and key"""
+    """Sets serial number, hardware version and key."""
+
     global URL
     global KEY
     if URL.get() == "":
@@ -230,29 +221,27 @@ def ident_and_key_set():
     if version_entry.get() == "x.x.x":
         log.insert(tk.END, "You must specify version.\n")
         return
-    if not urlparse.iscorrect(URL.get()):
-        log.insert(tk.END, r"Incorrect URL format. Must be one of:" + "\n"
-                           r' "com:\\.\COMX"' + "\n"
-                           r' "com:///dev/ttyUSBX"' + "\n"
-                           r' "com:///dev/ttyACMX"' + "\n")
+    if not urlparse.validate(URL.get()):
+        log.insert(tk.END, 'Incorrect URL format. Must be one of:\n'
+                           ' "com:\\\\.\COMx"\n'
+                           ' "com:///dev/ttyUSBx"\n'
+                           ' "com:///dev/ttyACMx"\n'
+                           ' "com:///dev/ttySx"\n')
         return
     # Checking serial and version format
     if not serial_entry.validate():
         return
     if not version_entry.validate():
         return
-    # the statement below is necessary to work with url as C char*
+    # The statement below is necessary to work with url as C char*
     url = ctypes.create_string_buffer(URL.get().encode())
     key = ctypes.create_string_buffer(KEY.get().encode())
     version = ctypes.create_string_buffer(version_entry.get().encode())
     log.insert(
         tk.END,
-        "Starting identificator and key setting."
-        " Port: {}\n Serial number: {}\n "
-        "Hardware version: {}\n".format(
-            URL.get(),
-            serial_entry.get(),
-            version_entry.get()))
+        "Starting identificator and key setting. Port: {}\n Serial number: "
+        "{}\n Hardware version: {}\n".format(URL.get(), serial_entry.get(),
+                                             version_entry.get()))
     log.insert(tk.END, "Please wait\n")
     main_win.update()
     res = epcbootlib.urpc_write_ident(url, key,
@@ -265,6 +254,7 @@ def ident_and_key_set():
 
 
 def _autoincrement_serial():
+
     global AUTOINCR
     if AUTOINCR.get():
         serial_number = int(serial_entry.get())
@@ -276,6 +266,7 @@ def _autoincrement_serial():
 
 
 def _serial_validation(content, trigger_type):
+
     if content == "xxx" and trigger_type == "focusin":
         # clears the hint
         serial_entry.delete(0, tk.END)
@@ -382,11 +373,27 @@ def validation_command(widget_name, content, trigger_type):
 
 
 def invalid_command(widget_name, content):
-    """Starts if validation commands return False"""
+    """Starts if validation commands return False."""
+
     instance = main_win.nametowidget(widget_name)  # getting certain entry
     instance.delete(0, tk.END)
     instance.insert(tk.END, content)
     instance.config(foreground="red")
+
+
+def close_window():
+    """This function breaks an infinite loop in the update stream."""
+
+    global RUNNING
+    global UPDATE_LOCK
+    global UPDATE_RUNNING
+    if UPDATE_RUNNING:
+        messagebox.showinfo("Information",
+                            "You need to wait for the update to complete")
+        return
+    UPDATE_LOCK.release()
+    RUNNING = False
+    main_win.destroy()
 
 
 # Creating main window
@@ -401,38 +408,39 @@ elif sys.platform.startswith("linux"):
 else:
     print("Unknown system!")
 main_win.title("EPCboot")
-main_win.resizable(tk.FALSE, tk.FALSE)  # disabling resizability
+main_win.resizable(tk.FALSE, tk.FALSE)  # disable resizability
+FIRMWARE = ""  # string containing firmware
 
-FIRMWARE = ""            # string containing firmware
-URL = tk.StringVar()        # URL of port
-FIRM_PATH = tk.StringVar()  # path to firmware
-# Used special tk.StringVar type to supply opportunity to link
-# 1. URL        and  combox
-# 2. FIRM_PATH  and  firmware_entry
-# (see below)
-
-firmware_tab = ttk.Frame(main_win)  # ttk.Frame(notebook)
-developer_tab = ttk.Frame(main_win)  # ttk.Frame(notebook)
+firmware_tab = ttk.Frame(main_win)
+developer_tab = ttk.Frame(main_win)
 
 # firmware tab:
 com_frame = ttk.Labelframe(firmware_tab, text="COM settings")
 com_label = ttk.Label(com_frame, text="COM port:")
+URL = tk.StringVar()  # URL of port
 combox = ttk.Combobox(com_frame, postcommand=_upd_combox, width=15,
                       textvariable=URL)
 combox.bind("<<ComboboxSelected>>", com_chosen)
 com_hint = ttk.Label(com_frame, font=("Calibri Italic", 10))
+underlined_font = font.Font(com_hint, com_hint.cget("font"))
+underlined_font.configure(underline=True)
+com_hint.configure(font=underlined_font)
+tip_com_hin = ToolTip(com_hint)
 if sys.platform.startswith("win"):
-    com_hint.config(text=r"Input format:  com:\\.\COMx", foreground="grey")
-else:
-    com_hint.config(text=r"Input format:  com://dev/ttyACMx or "
-                         r"com://dev/ttyCOMx", foreground="grey")
+    com_hint.config(text="Input format", foreground="grey")
+    tip_com_hin.set_text(r"com:\\.\COMx")
+elif sys.platform.startswith("linux"):
+    com_hint.config(text="Input format", foreground="grey")
+    tip_com_hin.set_text("com:///dev/ttyUSBx\ncom:///dev/ttyACMx\n"
+                         "com:///dev/ttySx")
 firmware_frame = ttk.Labelframe(firmware_tab, text="Firmware update")
 firmware_label = ttk.Label(firmware_frame, text="Firmware:")
+FIRM_PATH = tk.StringVar()  # path to firmware
 firmware_entry = ttk.Entry(firmware_frame, textvariable=FIRM_PATH, width=17)
 firmware_browse_button = ttk.Button(firmware_frame, text="Browse...", width=10,
                                     command=firmware_browse)
 upd_button = ttk.Button(firmware_tab, text="Update firmware",
-                        state=tk.DISABLED, width=20, command=start_upd)
+                        state=tk.DISABLED, width=20, command=start_update)
 
 com_frame.pack(side=tk.TOP, fill=tk.X, padx=5, pady=3, ipady=6)
 firmware_frame.pack(side=tk.TOP, fill=tk.X, padx=5, pady=3, ipady=5)
@@ -570,18 +578,12 @@ def on_modification(event=None):
 log.bind("<<Modified>>", on_modification)
 
 # Add a thread to update firmware
-UPDATE_STARTED = False
 RUNNING = True
-thread_upd = threading.Thread(target=firmware_upd)
+UPDATE_LOCK = threading.Lock()
+UPDATE_LOCK.acquire()
+UPDATE_RUNNING = False
+thread_upd = threading.Thread(target=firmware_update)
 thread_upd.start()
-
-
-def close_window():
-    """This function breaks an infinite loop in the update stream."""
-
-    global RUNNING
-    RUNNING = False
-    main_win.destroy()
 
 
 main_win.protocol("WM_DELETE_WINDOW", close_window)
