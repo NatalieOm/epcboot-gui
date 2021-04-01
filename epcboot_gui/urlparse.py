@@ -18,8 +18,7 @@ def validate(url: str) -> str:
     return: True if url format is correct.
     """
 
-    system = sys.platform
-    if system.startswith("win"):
+    if sys.platform.startswith("win"):
         if not re.match(r"^com:\\\\\.\\COM\d+$", url):
             return 'Incorrect URL format. Must be "com:\\\\.\\COMx"\n'
         com = re.search(r"COM\d+$", url).group(0)
@@ -27,7 +26,7 @@ def validate(url: str) -> str:
                        serial.tools.list_ports.comports()]:
             return "Not available port\n"
         return ""
-    if system.startswith("linux"):
+    if sys.platform.startswith("linux"):
         if not re.match(r"^com:///dev/tty(USB|ACM|S)\d+$", url):
             return ('Incorrect URL format. Must be one of:\n '
                     '"com:///dev/ttyUSBx"\n'
