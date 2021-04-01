@@ -18,6 +18,7 @@ import serial.tools.list_ports
 import epcbootlib
 import urlparse
 from tip import ToolTip
+from version import Version
 
 
 parser = argparse.ArgumentParser()
@@ -423,15 +424,13 @@ def close_window():
 # Creating main window
 main_win = tk.Tk()
 # Setting window geometry and title
-win_geometry = ("500", "383")  # <- SHOULD CHANGE IT!!!
-linux_geometry = ("640", "412")
 if sys.platform.startswith("win"):
-    main_win.geometry(win_geometry[0] + "x" + win_geometry[1])
+    main_win.geometry("500x383")
 elif sys.platform.startswith("linux"):
-    main_win.geometry(linux_geometry[0] + "x" + linux_geometry[1])
+    main_win.geometry("640x412")
 else:
     print("Unknown system!")
-main_win.title("EPCboot")
+main_win.title(f"EPCboot {Version.full}")
 FIRMWARE = ""  # string containing firmware
 
 # firmware tab:
